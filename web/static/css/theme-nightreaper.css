@@ -1,0 +1,281 @@
+/* ============================================================
+   NightReaper AI — 终端作战面板主题覆盖层
+   (c) 2026 yyyr · 女娲安全工作室
+   独立定制层：不修改上游任何 CSS，仅通过加载顺序覆盖。
+   设计语言：直角 + 1px 荧光绿描边 + 等宽字标 + 作战网格 + CRT 质感
+   ============================================================ */
+
+/* ---------- 变量层：亮色（纸白终端） ---------- */
+:root {
+    --accent-color: #00915e;
+    --accent-hover: #00b374;
+    --brand-core: #0a0f0d;
+    --brand-ai-start: #008f5b;
+    --brand-ai-end: #00c2a0;
+    --border-color: #dfe5e0;
+    --shadow-sm: 0 0 0 1px rgba(0, 145, 94, 0.12);
+    --shadow-md: 0 0 0 1px rgba(0, 145, 94, 0.22), 0 0 14px rgba(0, 145, 94, 0.10);
+    --shadow-lg: 0 0 0 1px rgba(0, 145, 94, 0.30), 0 0 28px rgba(0, 145, 94, 0.14);
+    --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", ui-monospace, monospace;
+}
+
+/* ---------- 变量层：暗色（深黑绿相，夜镰主场） ---------- */
+html[data-theme="dark"] {
+    --accent-color: #00ff88;
+    --accent-hover: #5dffa8;
+    --brand-core: #eafff4;
+    --brand-ai-start: #00ff88;
+    --brand-ai-end: #00e5ff;
+    --bg-primary: #0a0f0c;
+    --bg-secondary: #060a08;
+    --bg-tertiary: #101812;
+    --card-bg: #0c120e;
+    --input-bg: #0a100c;
+    --border-color: #1d3a2a;
+    --shadow-sm: 0 0 0 1px rgba(0, 255, 136, 0.14);
+    --shadow-md: 0 0 0 1px rgba(0, 255, 136, 0.24), 0 0 16px rgba(0, 255, 136, 0.08);
+    --shadow-lg: 0 0 0 1px rgba(0, 255, 136, 0.34), 0 0 32px rgba(0, 255, 136, 0.12);
+}
+
+/* ---------- 全局基础 ---------- */
+::selection {
+    background: rgba(0, 255, 136, 0.85);
+    color: #04140b;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 1px;
+}
+
+/* 荧光绿滚动条（全局） */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 200, 110, 0.35);
+    border-radius: 0;
+    border: 1px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 255, 136, 0.6); background-clip: content-box; }
+
+/* ---------- 等宽字标体系：标题 / 导航 / 按钮 / 品牌位 ---------- */
+h1, h2, h3, h4, h5, h6,
+.brand-wordmark__core,
+.main-sidebar-nav a,
+.main-header, .topbar, .header-nav,
+button, .btn, [class*="btn-"], [class*="button-"],
+.tabs, [role="tab"], nav, .nav-item,
+input[type="text"], input[type="password"], input[type="search"] {
+    font-family: var(--font-mono, Consolas, monospace);
+}
+
+/* 大写化 + 字距：导航与按钮的终端指令感 */
+.main-sidebar-nav a,
+[role="tab"], .nav-item {
+    letter-spacing: 0.06em;
+}
+
+h1, h2, h3 {
+    letter-spacing: 0.04em;
+}
+
+/* ---------- 形状语言：收紧圆角 ---------- */
+button, .btn, [class*="btn-"],
+input[type="text"], input[type="password"], input[type="search"], input[type="email"], textarea, select,
+[class*="card"], [class*="panel"], [class*="modal"], [class*="dialog"], [class*="container-box"],
+[class*="tooltip"], [class*="dropdown"], [class*="popup"] {
+    border-radius: 3px;
+}
+
+/* 圆形元素豁免（头像、状态点、开关） */
+[class*="avatar"], [class*="Avatar"],
+[class*="badge-dot"], [class*="status-dot"], [class*="spinner"],
+[class*="switch"], [class*="toggle"], [class*="circle"] {
+    border-radius: revert;
+}
+
+/* ---------- 暗色主题：作战网格背景 ---------- */
+html[data-theme="dark"] body {
+    background:
+        linear-gradient(rgba(0, 255, 136, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 136, 0.025) 1px, transparent 1px),
+        radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0, 255, 136, 0.06), transparent 60%),
+        linear-gradient(180deg, #060a08 0%, #0a0f0c 100%);
+    background-size: 44px 44px, 44px 44px, 100% 100%, 100% 100%;
+    background-attachment: fixed;
+}
+
+/* 亮色主题：淡网格纸 */
+body {
+    background-image:
+        linear-gradient(rgba(0, 145, 94, 0.030) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 145, 94, 0.030) 1px, transparent 1px);
+    background-size: 44px 44px;
+    background-attachment: fixed;
+}
+
+/* ---------- 侧栏 / 顶栏：终端状态栏化 ---------- */
+html[data-theme="dark"] .main-sidebar {
+    border-right: 1px solid rgba(0, 255, 136, 0.22);
+    background: linear-gradient(180deg, rgba(0, 255, 136, 0.03), transparent 30%), var(--bg-secondary);
+}
+
+.main-sidebar-nav a:hover {
+    box-shadow: inset 2px 0 0 var(--accent-color);
+}
+
+/* 主内容区顶栏底边：绿光分割线 */
+.main-header, .topbar, [class*="header-bar"] {
+    border-bottom: 1px solid rgba(0, 200, 110, 0.25);
+}
+
+html[data-theme="dark"] .main-header,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] [class*="header-bar"] {
+    box-shadow: 0 1px 0 rgba(0, 255, 136, 0.10), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- 按钮火力化 ---------- */
+[class*="btn-primary"], [class*="btn-accent"] {
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.35), 0 0 14px rgba(0, 255, 136, 0.18);
+    transition: box-shadow 0.15s ease, transform 0.1s ease, filter 0.15s ease;
+}
+
+[class*="btn-primary"]:hover, [class*="btn-accent"]:hover {
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.6), 0 0 22px rgba(0, 255, 136, 0.3);
+    filter: brightness(1.08);
+}
+
+[class*="btn-primary"]:active, [class*="btn-accent"]:active {
+    transform: translateY(1px);
+}
+
+/* ---------- 卡片：边框亮起交互 ---------- */
+html[data-theme="dark"] [class*="card"] {
+    border: 1px solid rgba(0, 255, 136, 0.16);
+}
+
+html[data-theme="dark"] [class*="card"]:hover {
+    border-color: rgba(0, 255, 136, 0.38);
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.20), 0 0 20px rgba(0, 255, 136, 0.07);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ---------- 输入框：终端命令行质感 ---------- */
+input[type="text"], input[type="password"], input[type="search"], input[type="email"], textarea {
+    border: 1px solid var(--border-color);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, input[type="search"]:focus, input[type="email"]:focus, textarea:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 1px var(--accent-color), 0 0 12px rgba(0, 255, 136, 0.22);
+    outline: none;
+}
+
+/* ---------- 登录页：CRT 扫描线 + 角标 ---------- */
+[class*="login"], [class*="Login"], [id*="login"] {
+    position: relative;
+}
+
+[class*="login"]::after, [class*="Login"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 255, 136, 0.028) 0px,
+        rgba(0, 255, 136, 0.028) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+    z-index: 1;
+}
+
+/* ---------- 品牌字标：辉光 ---------- */
+.brand-wordmark__core,
+[class*="brand-wordmark"] {
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.55), 0 0 30px rgba(0, 255, 136, 0.25);
+}
+
+/* ---------- 弹窗：终端对话框 ---------- */
+html[data-theme="dark"] [class*="modal"],
+html[data-theme="dark"] [class*="dialog"] {
+    border: 1px solid rgba(0, 255, 136, 0.30);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 255, 136, 0.10), 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- 表格：指挥台数据网格 ---------- */
+html[data-theme="dark"] table {
+    border-collapse: collapse;
+}
+
+html[data-theme="dark"] table th {
+    font-family: var(--font-mono, Consolas, monospace);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.86em;
+    color: rgba(0, 255, 136, 0.85);
+    border-bottom: 1px solid rgba(0, 255, 136, 0.30);
+}
+
+/* ---------- 链接：绿色下划线扫描 ---------- */
+a {
+    text-decoration-color: rgba(0, 255, 136, 0.4);
+    text-underline-offset: 3px;
+}
+
+a:hover {
+    text-decoration-color: var(--accent-color);
+}
+
+/* ---------- 夜镰专属角标（右下角战损计数器位） ---------- */
+body::after {
+    content: "⌐ NR·OPS";
+    position: fixed;
+    right: 10px;
+    bottom: 8px;
+    z-index: 2147483000;
+    font-family: var(--font-mono, Consolas, monospace);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: rgba(0, 255, 136, 0.34);
+    pointer-events: none;
+    user-select: none;
+}
+
+html:not([data-theme="dark"]) body::after {
+    color: rgba(0, 120, 80, 0.30);
+}
+
+/* ---------- 登录按钮：覆盖上游硬编码蓝渐变（!important 对等压制） ---------- */
+.login-card .login-submit {
+    background: linear-gradient(135deg, #00b374 0%, #008f5b 100%) !important;
+    border: 1px solid rgba(0, 255, 136, 0.45) !important;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.25), 0 0 18px rgba(0, 200, 110, 0.35) !important;
+    font-family: var(--font-mono, Consolas, monospace) !important;
+    letter-spacing: 0.2em;
+}
+
+.login-card .login-submit:hover {
+    background: linear-gradient(135deg, #00d184 0%, #00a86a 100%) !important;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.5), 0 0 26px rgba(0, 255, 136, 0.4) !important;
+}
+
+.login-card .login-submit:active {
+    background: linear-gradient(135deg, #009b64 0%, #007a4e 100%) !important;
+}
+
+html[data-theme="dark"] .login-card .login-submit {
+    background: linear-gradient(135deg, #00c97e 0%, #00915e 100%) !important;
+    border: 1px solid rgba(0, 255, 136, 0.55) !important;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.30), 0 0 22px rgba(0, 255, 136, 0.28) !important;
+}
+
+html[data-theme="dark"] .login-card .login-submit:hover {
+    background: linear-gradient(135deg, #00e88f 0%, #00a86a 100%) !important;
+    border-color: rgba(93, 255, 168, 0.7) !important;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.5), 0 0 30px rgba(0, 255, 136, 0.4) !important;
+}

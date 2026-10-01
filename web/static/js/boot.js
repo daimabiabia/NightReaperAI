@@ -13,6 +13,17 @@
     sessionStorage.setItem('nrai_boot_v1', '1');
   } catch (e) { /* storage 不可用时仍播放一次 */ }
 
+  // ?theme=dark / ?theme=light 直达链接支持
+  try {
+    var q = new URLSearchParams(location.search);
+    var tq = q.get('theme');
+    if (tq === 'dark' || tq === 'light') {
+      document.documentElement.setAttribute('data-theme', tq);
+      document.documentElement.setAttribute('data-theme-preference', tq);
+      localStorage.setItem('cyberstrike-theme', tq);
+    }
+  } catch (e) { /* noop */ }
+
   // ---- 样式 ----
   var css = [
     '#nrai-boot{position:fixed;inset:0;z-index:99999;background:#04070a;',
@@ -133,4 +144,14 @@
   }
   root.addEventListener('click', skip);
   window.addEventListener('keydown', skip, { once: true });
+})();
+
+/* ---- 页面标题光标彩蛋：NIGHTREAPER AI ▌ 闪烁 ---- */
+(function () {
+  var base = 'NIGHTREAPER AI';
+  var on = true;
+  setInterval(function () {
+    on = !on;
+    document.title = base + (on ? ' ▌' : '  ');
+  }, 900);
 })();
