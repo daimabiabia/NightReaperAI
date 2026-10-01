@@ -67,7 +67,7 @@
     '<div class="nrai-barwrap"><div class="nrai-bar"></div></div>' +
     '<div class="nrai-granted">ACCESS GRANTED</div>' +
     '</div>' +
-    '<div class="nrai-foot">NIGHTREAPER AI v1.7.20 · BY YYYR · 女娲安全工作室</div>';
+    '<div class="nrai-foot">NIGHTREAPER AI v1.0.0 · BY YYYR · 女娲安全工作室</div>';
   document.body.appendChild(root);
 
   // ---- 矩阵雨 ----

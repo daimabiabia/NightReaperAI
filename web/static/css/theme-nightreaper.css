@@ -231,6 +231,206 @@ a:hover {
     text-decoration-color: var(--accent-color);
 }
 
+/* ============================================================
+   登录页全屏接管：深夜终端认证室
+   上游把 overlay 排在文档流里（登录框占页面顶部、dashboard 在下方
+   照常渲染）——此处强制为全屏悬浮层，登录前彻底遮蔽主页。
+   恒定夜色氛围（不分主题）。
+   ============================================================ */
+.login-overlay,
+html[data-theme="dark"] .login-overlay,
+html[data-theme="dark"] #login-overlay,
+#login-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    transform: none !important;
+    background:
+        linear-gradient(rgba(0, 255, 136, 0.030) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 136, 0.030) 1px, transparent 1px),
+        radial-gradient(ellipse 80% 55% at 50% -8%, rgba(0, 255, 136, 0.10), transparent 62%),
+        radial-gradient(ellipse 60% 40% at 50% 110%, rgba(0, 120, 80, 0.08), transparent 60%),
+        #050806 !important;
+    background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100% !important;
+    background-attachment: fixed;
+    z-index: 1200;
+    padding: 24px;
+}
+
+/* CRT 扫描带：周期性自上而下 */
+.login-overlay::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 130px;
+    top: -140px;
+    pointer-events: none;
+    background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(0, 255, 136, 0.045) 55%,
+        rgba(0, 255, 136, 0.085) 85%,
+        transparent 100%);
+    animation: nrai-crt-sweep 7s linear infinite;
+}
+
+@keyframes nrai-crt-sweep {
+    0%   { top: -140px; opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 110%; opacity: 0; }
+}
+
+/* 底部终端签名行 */
+.login-overlay::after {
+    content: "NIGHTREAPER AI v1.0.0  ·  © 2026 yyyr / 女娲安全工作室  ·  UNAUTHORIZED ACCESS IS MONITORED & LOGGED";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: auto !important;   /* 抵消 [class*="login"]::after 的 inset:0，否则 top:0+bottom 拉伸导致文字顶置 */
+    height: auto !important;
+    bottom: 18px;
+    text-align: center;
+    font-family: var(--font-mono, Consolas, monospace);
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: rgba(0, 255, 136, 0.42);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* 终端窗口卡片：直角 + 双层绿框 + 深夜卡底（登录页恒定暗色） */
+.login-card {
+    border-radius: 4px !important;
+    background: #0a100c !important;
+    border: 1px solid rgba(0, 255, 136, 0.35) !important;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.65),
+        0 0 0 4px rgba(0, 255, 136, 0.06),
+        0 0 46px rgba(0, 255, 136, 0.13),
+        0 30px 70px rgba(0, 0, 0, 0.65) !important;
+    max-width: 430px;
+    position: relative;
+    z-index: 2;
+}
+
+/* 终端标题栏 */
+.login-term-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(0, 255, 136, 0.055);
+    border-bottom: 1px solid rgba(0, 255, 136, 0.28);
+    font-family: var(--font-mono, Consolas, monospace);
+}
+
+.login-term-dots {
+    display: inline-flex;
+    gap: 6px;
+    flex: none;
+}
+
+.login-term-dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.login-term-dots i:nth-child(1) { background: #ff5f56; box-shadow: 0 0 6px rgba(255, 95, 86, 0.6); }
+.login-term-dots i:nth-child(2) { background: #ffbd2e; box-shadow: 0 0 6px rgba(255, 189, 46, 0.6); }
+.login-term-dots i:nth-child(3) { background: #27c93f; box-shadow: 0 0 6px rgba(39, 201, 63, 0.7); }
+
+.login-term-title {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    color: rgba(0, 255, 136, 0.80);
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.login-term-ver {
+    flex: none;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(0, 255, 136, 0.45);
+}
+
+/* 品牌区：去渐变底，深夜色 */
+.login-card .login-brand {
+    background: transparent;
+    border-bottom: 1px dashed rgba(0, 255, 136, 0.18);
+    padding: 26px 28px 18px;
+}
+
+/* 标题与副标语：荧光绿体系 */
+.login-card .login-title {
+    color: #7dffb8;
+    font-family: var(--font-mono, Consolas, monospace);
+    letter-spacing: 0.06em;
+    justify-content: center;
+}
+
+.login-card .login-subtitle {
+    color: rgba(167, 176, 192, 0.85);
+    font-family: var(--font-mono, Consolas, monospace);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    margin-top: 10px;
+}
+
+/* 表单区：深夜输入行 */
+.login-card .login-form {
+    padding: 22px 28px 26px;
+    background: transparent;
+}
+
+.login-card .form-group label {
+    color: rgba(0, 255, 136, 0.72);
+    font-family: var(--font-mono, Consolas, monospace);
+    font-size: 0.76rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.login-card .form-group input {
+    background: #070b09 !important;
+    border: 1px solid rgba(0, 255, 136, 0.22) !important;
+    color: #d8ffe9 !important;
+    font-family: var(--font-mono, Consolas, monospace) !important;
+    border-radius: 3px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-card .form-group input:focus {
+    border-color: rgba(0, 255, 136, 0.65) !important;
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.45), 0 0 14px rgba(0, 255, 136, 0.18) !important;
+}
+
+.login-card .form-group input::placeholder {
+    color: rgba(107, 114, 128, 0.55);
+}
+
+/* 错误条：红色终端告警 */
+.login-card .login-error {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: #fca5a5;
+    font-family: var(--font-mono, Consolas, monospace);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+}
+
 /* ---------- 夜镰专属角标（右下角战损计数器位） ---------- */
 body::after {
     content: "⌐ NR·OPS";
