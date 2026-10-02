@@ -25,6 +25,7 @@ import (
 	"cyberstrike-ai/internal/handler"
 	"cyberstrike-ai/internal/hitl"
 	"cyberstrike-ai/internal/knowledge"
+	"cyberstrike-ai/internal/license"
 	"cyberstrike-ai/internal/logger"
 	"cyberstrike-ai/internal/mcp"
 	"cyberstrike-ai/internal/mcp/builtin"
@@ -81,6 +82,8 @@ func New(cfg *config.Config, log *logger.Logger, configPath string) (*App, error
 	if err != nil {
 		return nil, fmt.Errorf("初始化调用拦截规则: %w", err)
 	}
+	// 发布版授权门禁：接入 config.yaml 的 license_key
+	license.SetConfigKey(cfg.LicenseKey)
 	if err := multiagent.InitADK(); err != nil {
 		return nil, fmt.Errorf("初始化 Eino ADK: %w", err)
 	}
@@ -905,6 +908,11 @@ func setupRoutes(
 	// API路由
 	api := router.Group("/api")
 
+	// 授权状态（公开）：受限机器可查询本机授权码，用于向作者申请 license_key
+	api.GET("/license/status", func(c *gin.Context) {
+		c.JSON(http.StatusOK, license.LicenseStatus())
+	})
+
 	// 认证相关路由
 	authRoutes := api.Group("/auth")
 	loginRL := security.NewRateLimiter(10, 1*time.Minute)
@@ -932,6 +940,19 @@ func setupRoutes(
 
 	protected := api.Group("")
 	protected.Use(security.AuthMiddleware(authManager))
+	// License gate (public builds): unlicensed machines may browse but
+	// cannot execute any task (all non-GET APIs return 403).
+	// Evaluated per-request so a runtime license_key can unlock it live.
+	protected.Use(func(c *gin.Context) {
+		if (c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead) || !license.Restricted() {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "RESTRICTED BUILD — 任务执行已被授权门禁禁用。本机授权码: " + license.MachineCode() + " ，请联系 NIGHTREAPER 作者 (github.com/daimabiabia) 获取 license_key 并填入 config.yaml。",
+			"code":  "LICENSE_RESTRICTED",
+		})
+	})
 	protected.Use(security.RBACMiddlewareWithDenyHook(app.db, func(c *gin.Context, reason, permission string) {
 		if auditSvc != nil {
 			auditSvc.Record(c, audit.Entry{

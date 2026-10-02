@@ -20,6 +20,7 @@ import (
 
 type Config struct {
 	Version     string                `yaml:"version,omitempty" json:"version,omitempty"` // 前端显示的版本号，如 v1.3.3
+	LicenseKey  string                `yaml:"license_key,omitempty" json:"license_key,omitempty"` // 发布版机器授权密钥（由工具作者签发）
 	Server      ServerConfig          `yaml:"server"`
 	Log         LogConfig             `yaml:"log"`
 	MCP         MCPConfig             `yaml:"mcp"`

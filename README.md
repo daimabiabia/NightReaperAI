@@ -79,9 +79,25 @@ ai:
       api_key: "sk-xxxx"        # low effort：侦察 / 枚举，省钱档
 ```
 
+## 🔒 使用限制（License Gate）
+
+Public builds and source builds of this repository run in **restricted mode** to prevent abuse:
+
+- Browsing / login / configuration views work normally (all `GET` APIs)
+- **All task-execution APIs return `403 LICENSE_RESTRICTED`** until the machine is licensed
+- Check your machine code: `GET /api/license/status` → `machine_code` (e.g. `NR77-4796-32CF-1265`)
+- Send the machine code to the author (**yyyr · 女娲安全工作室**) to obtain a `license_key`, then put it in `config.yaml`:
+
+```yaml
+license_key: "paste-your-key-here"
+```
+
+- Self-compiled builds from this repo contain **no license material** and can never be unlocked — only official Release binaries carry the signing secret
+- The `local` build tag (`go build -tags local`) removes all restrictions and is reserved for the author's own machines
+
 ## ⚠️ 免责声明
 
-本项目仅供**已获得书面授权**的安全测试、教学与研究使用。请在合法合规前提下使用，使用者对自身行为承担全部责任，作者不承担任何滥用导致的法律责任。未经授权对第三方系统进行测试属于违法行为。
+本项目仅供**已获得书面授权**的安全测试、教学与研究使用。请在合法合规前提下使用，使用者对自身行为承担全部责任，作者不承担任何滥用导致的法律责任。未经授权对第三方系统进行测试属于违法行为。**严禁将本工具用于任何未授权目的；受限构建是防止滥用的第一道门，绕过或移除授权门禁即视为放弃使用许可。**
 
 ## 📄 许可证
 
