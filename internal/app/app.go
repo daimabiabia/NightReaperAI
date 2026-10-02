@@ -1407,6 +1407,9 @@ func setupRoutes(
 
 	// API文档页面（公开访问，但需要登录后才能使用API）
 	router.GET("/api-docs", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
 		c.HTML(http.StatusOK, "api-docs.html", nil)
 	})
 
@@ -1414,12 +1417,16 @@ func setupRoutes(
 	router.Static("/static", "./web/static")
 	router.LoadHTMLGlob("web/templates/*")
 
-	// 前端页面
+	// 前端页面（禁缓存：HTML 必须每次回源，否则旧 HTML 引用的旧 JS/CSS 会导致
+	// 版本号/文案残留，静态资源的版本参数也无法生效）
 	router.GET("/", func(c *gin.Context) {
 		version := app.config.Version
 		if version == "" {
 			version = "v1.0.0"
 		}
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
 		c.HTML(http.StatusOK, "index.html", gin.H{"Version": version})
 	})
 }
