@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"cyberstrike-ai/internal/app"
 	"cyberstrike-ai/internal/config"
@@ -129,16 +130,35 @@ func main() {
 	defer log.Sync()
 
 	if err := configureProcessIsolation(cfg); err != nil {
-		log.Fatal("进程隔离初始化失败", "error", err)
+		fatalWithPause(log, "进程隔离初始化失败", err)
 	}
 
-	probeCtx, probeCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	backend, probeErr := processguard.Check(probeCtx)
-	probeCancel()
-	if probeErr != nil {
-		log.Fatal("进程隔离启动检查失败", "error", probeErr)
+	// 自检加重试：探针子进程在 commit 内存瞬时紧张时可能初始化失败
+	// （0xc0000142），这是环境性瞬时故障，不能一票否决整个启动。
+	var backend string
+	var probeErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		probeCtx, probeCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		backend, probeErr = processguard.Check(probeCtx)
+		probeCancel()
+		if probeErr == nil {
+			break
+		}
+		log.Warn("任务进程隔离检查未通过", zap.Int("attempt", attempt), zap.Error(probeErr))
+		if attempt < 3 {
+			time.Sleep(2 * time.Second)
+		}
 	}
-	log.Info("任务进程隔离已就绪", zap.String("backend", backend))
+	if probeErr != nil {
+		if cfg.Security.ProcessIsolation.Mode == "required" {
+			fatalWithPause(log, "进程隔离启动检查失败", probeErr)
+		}
+		// mode=auto: 自检只是探测，任务遏制在实际派生任务时仍会按 Job
+		// Object 建立。瞬时失败降级继续启动，避免双击场景下窗口闪退。
+		log.Warn("任务进程隔离检查失败，已降级继续启动（process_isolation.mode=auto）", zap.Error(probeErr))
+	} else {
+		log.Info("任务进程隔离已就绪", zap.String("backend", backend))
+	}
 
 	// 创建可取消的根 context，用于优雅关闭
 	ctx, cancel := context.WithCancel(context.Background())
@@ -151,7 +171,7 @@ func main() {
 	// 创建应用
 	application, err := app.New(cfg, log, cp)
 	if err != nil {
-		log.Fatal("应用初始化失败", "error", err)
+		fatalWithPause(log, "应用初始化失败", err)
 	}
 
 	// 在后台监听信号
@@ -168,9 +188,32 @@ func main() {
 		if ctx.Err() != nil {
 			log.Info("服务器已优雅关闭")
 		} else {
-			log.Fatal("服务器启动失败", "error", err)
+			fatalWithPause(log, "服务器启动失败", err)
 		}
 	}
+}
+
+// fatalWithPause reports a fatal startup error and, when launched from an
+// interactive console (e.g. double-click on Windows), keeps the window open
+// until the operator presses Enter, so the reason is actually readable.
+// Non-interactive callers (systemd/docker/piped output) exit immediately.
+func fatalWithPause(log *logger.Logger, msg string, err error) {
+	log.Error(msg, zap.Error(err))
+	fmt.Fprintf(os.Stderr, "\n[启动失败] %s: %v\n", msg, err)
+	if stdinIsInteractive() {
+		fmt.Fprintln(os.Stderr, "按回车键关闭窗口...")
+		_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
+	}
+	os.Exit(1)
+}
+
+// stdinIsInteractive reports whether stdin is attached to a terminal.
+func stdinIsInteractive() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func runResetAdminPassword(cfg *config.Config) error {
