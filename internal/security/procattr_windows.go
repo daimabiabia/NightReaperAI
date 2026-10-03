@@ -10,15 +10,21 @@ import (
 	"time"
 )
 
+const createNoWindow = 0x08000000 // syscall.CREATE_NO_WINDOW (not exported by syscall)
+
 func prepareShellCmdSession(cmd *exec.Cmd) error {
 	if cmd == nil {
 		return nil
 	}
 	// 独立进程组，便于 taskkill /T 终止整棵子进程树。
+	// CREATE_NO_WINDOW：子进程拿全新隐藏控制台，不继承服务器控制台——
+	// 真实 conhost 下经代父进程（PROC_THREAD_ATTRIBUTE_PARENT_PROCESS）
+	// 派生的子进程会因控制台初始化失败而以 0xc0000142 退出；任务输出
+	// 本就经管道捕获，隐藏控制台同时避免任务输出刷进服务器窗口。
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
-	cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP
+	cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP | createNoWindow
 	return nil
 }
 

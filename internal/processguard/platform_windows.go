@@ -27,8 +27,14 @@ func configurePlatform(o *Options) error {
 	}
 	return nil
 }
+const createNoWindow = 0x08000000 // syscall.CREATE_NO_WINDOW (not exported by syscall)
+
 func configureGuardian(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}
+	// CREATE_NO_WINDOW gives the child a fresh hidden console instead of
+	// inheriting the parent's. Inheriting a real conhost console across a
+	// reparented spawn (PROC_THREAD_ATTRIBUTE_PARENT_PROCESS) fails console
+	// init and the child dies with STATUS_DLL_INIT_FAILED (0xc0000142).
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP | createNoWindow}
 }
 func gatedChildMain(args []string) error {
 	return fmt.Errorf("Unix launch gates are unavailable on Windows")
