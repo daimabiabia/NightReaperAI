@@ -30,6 +30,10 @@ func main() {
 	checkIsolation := flag.Bool("check-process-isolation", false, "Probe task containment and cleanup, then exit without starting services")
 	flag.Parse()
 
+	// 双击启动时挂在真实 conhost 下，VT 解析默认关闭，ANSI 彩色码会以
+	// "[1m[36m" 字面量刷屏；管道/重定向场景自动跳过、行为不变。
+	termout.EnableVTProcessing()
+
 	// 环境变量兼容（便于 systemd/docker 等不传参场景）
 	if *httpsBootstrap && *httpBootstrap {
 		fmt.Fprintln(os.Stderr, "--http and --https cannot be used together")
