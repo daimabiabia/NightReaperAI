@@ -2,7 +2,9 @@ package security
 
 import (
 	"database/sql"
+	"crypto/subtle"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +39,12 @@ type AuthManager struct {
 
 	mu       sync.RWMutex
 	sessions map[string]Session
+
+	// First-run setup state. setupCode lives only in memory for the current
+	// process run and is shown once in the console banner; it gates admin
+	// initialization from the web UI while no admin password exists yet.
+	needsSetup bool
+	setupCode  string
 }
 
 // NewAuthManager creates a new AuthManager instance.
@@ -52,8 +60,9 @@ func NewAuthManager(sessionDurationHours int) *AuthManager {
 }
 
 // AttachRBACStore enables multi-user RBAC authentication. When no users exist yet,
-// it bootstraps the built-in admin account and returns the generated initial password.
-func (a *AuthManager) AttachRBACStore(db *database.DB) (generatedAdminPassword string, err error) {
+// it bootstraps the built-in admin account with an unshown random password and
+// returns a short setup code for the web-based first-run initialization wizard.
+func (a *AuthManager) AttachRBACStore(db *database.DB) (setupCode string, err error) {
 	if db == nil {
 		return "", errors.New("database is required for authentication")
 	}
@@ -63,13 +72,15 @@ func (a *AuthManager) AttachRBACStore(db *database.DB) (generatedAdminPassword s
 		return "", err
 	}
 
+	// The bootstrap password exists only to satisfy the DB constraint and is
+	// never displayed or used; completing setup overwrites it.
 	adminPasswordHash := ""
 	if needsAdminPassword {
-		generatedAdminPassword, err = GenerateStrongPassword(24)
-		if err != nil {
-			return "", err
+		generatedPassword, genErr := GenerateStrongPassword(24)
+		if genErr != nil {
+			return "", genErr
 		}
-		adminPasswordHash, err = HashPassword(generatedAdminPassword)
+		adminPasswordHash, err = HashPassword(generatedPassword)
 		if err != nil {
 			return "", err
 		}
@@ -81,8 +92,65 @@ func (a *AuthManager) AttachRBACStore(db *database.DB) (generatedAdminPassword s
 
 	a.mu.Lock()
 	a.db = db
+	if needsAdminPassword {
+		a.needsSetup = true
+		code, codeErr := GenerateSetupCode(8)
+		if codeErr != nil {
+			a.mu.Unlock()
+			return "", codeErr
+		}
+		a.setupCode = code
+		setupCode = code
+	}
 	a.mu.Unlock()
-	return generatedAdminPassword, nil
+	return setupCode, nil
+}
+
+// NeedsSetup reports whether the built-in admin account is awaiting first-run
+// initialization (no usable password has been configured yet).
+func (a *AuthManager) NeedsSetup() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.needsSetup
+}
+
+// CompleteSetup validates the one-time setup code and sets the initial admin
+// password from the web UI. After success the setup state is cleared and the
+// code becomes invalid.
+func (a *AuthManager) CompleteSetup(code, password string) error {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	password = strings.TrimSpace(password)
+	if password == "" {
+		return errors.New("密码不能为空")
+	}
+	if len(password) < 8 {
+		return fmt.Errorf("密码长度至少需要 8 位")
+	}
+
+	a.mu.RLock()
+	needsSetup, setupCode, db := a.needsSetup, a.setupCode, a.db
+	a.mu.RUnlock()
+
+	if !needsSetup || db == nil {
+		return errors.New("管理员账号已完成初始化")
+	}
+	if code == "" || subtle.ConstantTimeCompare([]byte(code), []byte(setupCode)) != 1 {
+		return errors.New("初始化码不正确")
+	}
+
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	if err := db.UpdateRBACAdminPassword(hash); err != nil {
+		return err
+	}
+
+	a.mu.Lock()
+	a.needsSetup = false
+	a.setupCode = ""
+	a.mu.Unlock()
+	return nil
 }
 
 // Authenticate validates the password and creates a new session.

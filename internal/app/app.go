@@ -112,10 +112,10 @@ func New(cfg *config.Config, log *logger.Logger, configPath string) (*App, error
 
 	// 认证管理器（数据库初始化后挂载 RBAC）
 	authManager := security.NewAuthManager(cfg.Auth.SessionDurationHours)
-	if generatedPassword, err := authManager.AttachRBACStore(db); err != nil {
+	if setupCode, err := authManager.AttachRBACStore(db); err != nil {
 		return nil, fmt.Errorf("初始化RBAC失败: %w", err)
-	} else if generatedPassword != "" {
-		config.PrintBootstrapAdminPassword(generatedPassword)
+	} else if setupCode != "" {
+		config.PrintSetupRequired(setupCode)
 	}
 	for platform, userID := range cfg.Robots.ServiceAccountUserIDs() {
 		user, userErr := db.GetRBACUserByID(userID)
@@ -917,6 +917,8 @@ func setupRoutes(
 	authRoutes := api.Group("/auth")
 	loginRL := security.NewRateLimiter(10, 1*time.Minute)
 	{
+		authRoutes.GET("/setup-status", authHandler.SetupStatus)
+		authRoutes.POST("/setup", security.RateLimitMiddleware(loginRL), authHandler.SetupAccount)
 		authRoutes.POST("/login", security.RateLimitMiddleware(loginRL), authHandler.Login)
 		authRoutes.POST("/logout", security.AuthMiddleware(authManager), authHandler.Logout)
 		authRoutes.POST("/change-password", security.AuthMiddleware(authManager), security.RequirePermission("auth:self"), authHandler.ChangePassword)

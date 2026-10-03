@@ -42,6 +42,56 @@ type loginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type setupRequest struct {
+	Code     string `json:"code" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+// SetupStatus reports whether the built-in admin account still needs first-run
+// initialization. Public but harmless: it exposes a single boolean.
+func (h *AuthHandler) SetupStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"needs_setup": h.manager.NeedsSetup()})
+}
+
+// SetupAccount completes first-run admin initialization using the one-time
+// setup code shown in the server console.
+func (h *AuthHandler) SetupAccount(c *gin.Context) {
+	var req setupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "初始化码和新密码均不能为空"})
+		return
+	}
+
+	if err := h.manager.CompleteSetup(req.Code, req.Password); err != nil {
+		if h.audit != nil {
+			h.audit.Record(c, audit.Entry{
+				Level:    "warn",
+				Category: "auth",
+				Action:   "setup",
+				Result:   "failure",
+				Message:  "管理员初始化失败：" + err.Error(),
+				Actor:    "admin",
+			})
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "needs_setup": h.manager.NeedsSetup()})
+		return
+	}
+
+	if h.audit != nil {
+		h.audit.Record(c, audit.Entry{
+			Category: "auth",
+			Action:   "setup",
+			Result:   "success",
+			Message:  "管理员初始化完成",
+			Actor:    "admin",
+		})
+	}
+	if h.logger != nil {
+		h.logger.Info("管理员账号已完成首次初始化")
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "初始化完成，请使用新密码登录"})
+}
+
 type changePasswordRequest struct {
 	OldPassword string `json:"oldPassword"`
 	NewPassword string `json:"newPassword"`
@@ -57,6 +107,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	token, expiresAt, err := h.manager.Authenticate(req.Username, req.Password)
 	if err != nil {
+		if h.manager.NeedsSetup() {
+			c.JSON(http.StatusForbidden, gin.H{"error": "管理员账号尚未初始化，请先完成首次设置", "needs_setup": true})
+			return
+		}
 		if h.audit != nil {
 			h.audit.Record(c, audit.Entry{
 				Level:    "warn",

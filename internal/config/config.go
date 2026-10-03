@@ -1646,6 +1646,12 @@ func PrintBootstrapAdminPassword(password string) {
 	termout.PrintBootstrapAdminCredentials(password)
 }
 
+// PrintSetupRequired prints the first-run initialization banner with the
+// one-time setup code shown instead of a generated password.
+func PrintSetupRequired(code string) {
+	termout.PrintSetupRequired(code)
+}
+
 // generateRandomToken 生成用于 MCP 鉴权的随机字符串（64 位十六进制）
 func generateRandomToken() (string, error) {
 	b := make([]byte, 32)

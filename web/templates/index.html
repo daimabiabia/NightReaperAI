@@ -70,6 +70,25 @@
                     <span data-i18n="login.submit">登录</span>
                 </button>
             </form>
+            <form id="setup-form" class="login-form" style="display: none;">
+                <p class="login-subtitle" style="margin: -4px 0 10px;">首次启动：输入服务端控制台显示的 <b>8 位设置码</b>，并创建你自己的管理员密码。</p>
+                <div class="form-group">
+                    <label for="setup-code">设置码（见启动窗口）</label>
+                    <input type="text" id="setup-code" placeholder="例如 A7X2K9MB" autocomplete="off" maxlength="12" spellcheck="false" />
+                </div>
+                <div class="form-group">
+                    <label for="setup-password">新密码（至少 8 位）</label>
+                    <input type="password" id="setup-password" placeholder="设置管理员密码" autocomplete="new-password" />
+                </div>
+                <div class="form-group">
+                    <label for="setup-password2">确认新密码</label>
+                    <input type="password" id="setup-password2" placeholder="再次输入相同密码" autocomplete="new-password" />
+                </div>
+                <div id="setup-error" class="login-error" role="alert" style="display: none;"></div>
+                <button type="submit" class="btn-primary login-submit">
+                    <span>完成初始化</span>
+                </button>
+            </form>
         </div>
     </div>
 

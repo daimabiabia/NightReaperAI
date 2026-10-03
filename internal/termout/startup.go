@@ -95,6 +95,27 @@ func printStartupWebUI(out io.Writer, opts StartupWebUIOptions) {
 	s.BlankLine()
 }
 
+// PrintSetupRequired prints the first-run initialization banner: a one-time
+// setup code the user enters in the web UI to create their own admin password.
+func PrintSetupRequired(code string) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return
+	}
+
+	s := New(os.Stdout)
+	s.BlankLine()
+	s.Println(s.Bold(s.Yellow("★ 首次启动 · 需要初始化管理员账号")))
+	s.Println(s.Dim(strings.Repeat("─", 60)))
+	s.Println(s.White("  1. 打开浏览器访问下方地址（服务就绪后自动可访问）"))
+	s.Println(s.White("  2. 在初始化页面输入设置码：") + s.Bold(s.Green(code)))
+	s.Println(s.White("  3. 自己设置一个记得住的管理员密码（至少 8 位）"))
+	s.BlankLine()
+	s.Println(s.Dim("    设置码仅本次运行有效，重启后会生成新的设置码。"))
+	s.Println(s.Dim("    此码用于防止局域网内其他人在你之前抢注管理员。"))
+	s.BlankLine()
+}
+
 // PrintBootstrapAdminCredentials prints the initial admin password banner.
 func PrintBootstrapAdminCredentials(password string) {
 	password = strings.TrimSpace(password)

@@ -110,6 +110,8 @@ function showLoginOverlay(message = '') {
             errorBox.style.display = 'none';
         }
     }
+    // 首次启动：管理员未初始化时切换到设置码初始化面板
+    checkFirstRunSetup();
     setTimeout(function () {
         if (usernameInput && !usernameInput.value) {
             usernameInput.focus();
@@ -117,6 +119,99 @@ function showLoginOverlay(message = '') {
             passwordInput.focus();
         }
     }, 100);
+}
+
+// 检查是否处于首次启动状态（管理员尚未设置密码），据此切换登录/初始化面板
+async function checkFirstRunSetup() {
+    const loginForm = document.getElementById('login-form');
+    const setupForm = document.getElementById('setup-form');
+    if (!loginForm || !setupForm) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/auth/setup-status');
+        if (!res.ok) {
+            return;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (data && data.needs_setup) {
+            loginForm.style.display = 'none';
+            setupForm.style.display = 'block';
+            const codeInput = document.getElementById('setup-code');
+            const errorBox = document.getElementById('setup-error');
+            if (errorBox) {
+                errorBox.textContent = '';
+                errorBox.style.display = 'none';
+            }
+            if (codeInput) {
+                setTimeout(() => codeInput.focus(), 100);
+            }
+        } else {
+            loginForm.style.display = 'block';
+            setupForm.style.display = 'none';
+        }
+    } catch (error) {
+        // 状态检查失败时保持默认登录面板
+        console.warn('初始化状态检查失败:', error);
+    }
+}
+
+async function submitSetup(event) {
+    event.preventDefault();
+    const codeInput = document.getElementById('setup-code');
+    const passwordInput = document.getElementById('setup-password');
+    const password2Input = document.getElementById('setup-password2');
+    const errorBox = document.getElementById('setup-error');
+    const submitBtn = event.target ? event.target.querySelector('.login-submit') : null;
+
+    const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+    const password = passwordInput ? passwordInput.value : '';
+    const password2 = password2Input ? password2Input.value : '';
+
+    function showSetupError(msg) {
+        if (errorBox) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+    }
+
+    if (!code) { showSetupError('请输入服务端控制台显示的设置码'); return; }
+    if (!password || password.length < 8) { showSetupError('新密码长度至少需要 8 位'); return; }
+    if (password !== password2) { showSetupError('两次输入的密码不一致'); return; }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
+
+    try {
+        const response = await fetch('/api/auth/setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, password }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            showSetupError(result.error || '初始化失败，请检查设置码');
+            return;
+        }
+
+        // 初始化成功：切回登录面板，提示使用新密码登录
+        const loginForm = document.getElementById('login-form');
+        const setupForm = document.getElementById('setup-form');
+        if (setupForm) { setupForm.style.display = 'none'; }
+        if (loginForm) { loginForm.style.display = 'block'; }
+        if (codeInput) { codeInput.value = ''; }
+        if (passwordInput) { passwordInput.value = ''; }
+        if (password2Input) { password2Input.value = ''; }
+        showLoginOverlay('初始化完成，请使用新密码登录');
+    } catch (error) {
+        console.error('初始化失败:', error);
+        showSetupError('初始化失败，请稍后重试');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+    }
 }
 
 function hideLoginOverlay() {
@@ -281,6 +376,20 @@ async function submitLogin(event) {
             body: JSON.stringify({ username, password }),
         });
         const result = await response.json().catch(() => ({}));
+        if (response.status === 403 && result.needs_setup) {
+            // 管理员尚未初始化：切换到设置码面板
+            const loginFormEl = document.getElementById('login-form');
+            const setupFormEl = document.getElementById('setup-form');
+            if (loginFormEl) { loginFormEl.style.display = 'none'; }
+            if (setupFormEl) { setupFormEl.style.display = 'block'; }
+            if (errorBox) {
+                errorBox.textContent = result.error || '管理员账号尚未初始化';
+                errorBox.style.display = 'block';
+            }
+            const codeInput = document.getElementById('setup-code');
+            if (codeInput) { setTimeout(() => codeInput.focus(), 100); }
+            return;
+        }
         if (!response.ok || !result.token) {
             if (errorBox) {
                 const fallback = (typeof window !== 'undefined' && typeof window.t === 'function')
@@ -675,6 +784,10 @@ function setupLoginUI() {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', submitLogin);
+    }
+    const setupForm = document.getElementById('setup-form');
+    if (setupForm) {
+        setupForm.addEventListener('submit', submitSetup);
     }
 }
 
