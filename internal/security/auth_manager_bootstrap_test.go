@@ -32,8 +32,28 @@ func TestAttachRBACStoreBootstrapsAdminPassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AttachRBACStore second call: %v", err)
 	}
-	if second != "" {
-		t.Fatalf("expected no setup code on second bootstrap, got %q", second)
+	// 未完成初始化前，重启（重新 Attach）必须重新签发设置码 —— 待初始化状态跨重启持久
+	if second == "" {
+		t.Fatal("expected a fresh setup code on re-attach before setup completion")
+	}
+	if !manager.NeedsSetup() {
+		t.Fatal("needsSetup should still be true after re-attach")
+	}
+	if err := manager.CompleteSetup(second, "goodpassword1"); err != nil {
+		t.Fatalf("CompleteSetup: %v", err)
+	}
+	if manager.NeedsSetup() {
+		t.Fatal("needsSetup should be false after CompleteSetup")
+	}
+	if !manager.CheckUserPassword("admin", "goodpassword1") {
+		t.Fatal("new password should authenticate admin after setup")
+	}
+	third, err := manager.AttachRBACStore(db)
+	if err != nil {
+		t.Fatalf("AttachRBACStore third call: %v", err)
+	}
+	if third != "" {
+		t.Fatalf("expected no setup code after setup completed, got %q", third)
 	}
 }
 

@@ -95,6 +95,20 @@ func printStartupWebUI(out io.Writer, opts StartupWebUIOptions) {
 	s.BlankLine()
 }
 
+// PrintMachineLocked prints a prominent notice when the machine is not
+// licensed: the web UI is fully locked until a valid key is activated.
+func PrintMachineLocked(machineCode string) {
+	s := New(os.Stdout)
+	s.BlankLine()
+	s.Println(s.Bold(s.Red("🔒 本机未授权 · Web 界面已锁定")))
+	s.Println(s.Dim(strings.Repeat("─", 60)))
+	s.Println(s.White("  本机授权码：") + s.Bold(s.Yellow(machineCode)))
+	s.BlankLine()
+	s.Println(s.White("  请把上面的授权码发给作者，获取解锁码后在网页锁机页输入。"))
+	s.Println(s.Dim("    作者微信：YYYRMUMA    GitHub：github.com/daimabiabia"))
+	s.BlankLine()
+}
+
 // PrintSetupRequired prints the first-run initialization banner: a one-time
 // setup code the user enters in the web UI to create their own admin password.
 func PrintSetupRequired(code string) {

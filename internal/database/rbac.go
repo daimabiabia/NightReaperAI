@@ -323,9 +323,8 @@ func (db *DB) BootstrapRBAC(adminPasswordHash string, permissions map[string]str
 		return err
 	}
 	if userCount == 0 {
-		if strings.TrimSpace(adminPasswordHash) == "" {
-			return errors.New("admin password hash is required for initial bootstrap")
-		}
+		// 空哈希是合法的初始状态：表示管理员尚未完成首次初始化（Web 向导），
+		// 该状态跨重启保持，直到 CompleteSetup/重置流程写入真实密码。
 		if _, err := tx.Exec(`
 			INSERT INTO rbac_users (id, username, display_name, password_hash, enabled, is_builtin, created_at, updated_at)
 			VALUES (?, 'admin', '管理员', ?, 1, 1, ?, ?)

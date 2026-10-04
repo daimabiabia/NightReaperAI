@@ -599,6 +599,7 @@ func New(cfg *config.Config, log *logger.Logger, configPath string) (*App, error
 		mcpServer,
 		authManager,
 		openAPIHandler,
+		configPath,
 	)
 
 	return app, nil
@@ -904,13 +905,60 @@ func setupRoutes(
 	mcpServer *mcp.Server,
 	authManager *security.AuthManager,
 	openAPIHandler *handler.OpenAPIHandler,
+	configPath string,
 ) {
 	// API路由
 	api := router.Group("/api")
 
-	// 授权状态（公开）：受限机器可查询本机授权码，用于向作者申请 license_key
+	// 授权状态（公开）：锁机页用它查询本机授权码与锁定状态
 	api.GET("/license/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, license.LicenseStatus())
+	})
+
+	// 授权码激活（公开 + 限流）：锁机页输入解锁码，验证通过后写回 config.yaml
+	licenseRL := security.NewRateLimiter(10, 1*time.Minute)
+	api.POST("/license/activate", security.RateLimitMiddleware(licenseRL), func(c *gin.Context) {
+		var req struct {
+			Key string `json:"key" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "请输入授权码"})
+			return
+		}
+		key := strings.TrimSpace(req.Key)
+		if !license.VerifyKey(key) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":        "授权码无效或与本机不匹配（注意检查是否复制完整、是否已过期）",
+				"code":         "LICENSE_INVALID",
+				"machine_code": license.MachineCode(),
+			})
+			return
+		}
+		// 内存生效 + 持久化到 config.yaml，重启后保持解锁
+		license.SetConfigKey(key)
+		if err := persistLicenseKey(configPath, key); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"activated": true,
+				"persisted": false,
+				"warning":   "已临时解锁，但写入 config.yaml 失败（" + err.Error() + "），重启后需重新输入",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"activated": true, "persisted": true})
+	})
+
+	// 锁机中间件：未授权机器上，除 license/* 外的全部 API 一律 403。
+	// 登录、初始化向导在解锁前均不可用 —— 整机锁定在锁机页。
+	api.Use(func(c *gin.Context) {
+		if !license.Restricted() {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"code":         "LICENSE_LOCKED",
+			"machine_code": license.MachineCode(),
+			"error":        "本机未授权，已被锁定。请将本机授权码发送给作者获取解锁码。",
+		})
 	})
 
 	// 认证相关路由
@@ -1452,6 +1500,37 @@ func setupRoutes(
 		c.Header("Expires", "0")
 		c.HTML(http.StatusOK, "index.html", gin.H{"Version": version})
 	})
+}
+
+// persistLicenseKey 把激活成功的授权码写回 config.yaml 的 license_key 字段，
+// 使解锁在程序重启后依然生效。已存在 license_key 行则原位替换，否则插入文件顶部。
+func persistLicenseKey(configPath, key string) error {
+	if strings.TrimSpace(configPath) == "" {
+		configPath = "config.yaml"
+	}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("读取配置失败: %w", err)
+	}
+	lines := strings.Split(string(data), "\n")
+	newLine := `license_key: "` + key + `"`
+	replaced := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "license_key:") {
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			lines[i] = indent + newLine
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		lines = append([]string{"# 授权密钥（由锁机页激活时自动写入）", newLine, ""}, lines...)
+	}
+	if err := os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0600); err != nil {
+		return fmt.Errorf("写入配置失败: %w", err)
+	}
+	return nil
 }
 
 // registerWebshellTools 注册 WebShell 相关 MCP 工具，供 AI 助手在指定连接上执行命令与文件操作

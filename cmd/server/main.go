@@ -6,6 +6,7 @@ import (
 	"cyberstrike-ai/internal/app"
 	"cyberstrike-ai/internal/config"
 	"cyberstrike-ai/internal/database"
+	"cyberstrike-ai/internal/license"
 	"cyberstrike-ai/internal/logger"
 	"cyberstrike-ai/internal/processguard"
 	"cyberstrike-ai/internal/security"
@@ -176,6 +177,11 @@ func main() {
 	application, err := app.New(cfg, log, cp)
 	if err != nil {
 		fatalWithPause(log, "应用初始化失败", err)
+	}
+
+	// 未授权机器：提示控制台侧的锁机状态（Web 端会整页锁定）
+	if license.Restricted() {
+		termout.PrintMachineLocked(license.MachineCode())
 	}
 
 	// 在后台监听信号

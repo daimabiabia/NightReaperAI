@@ -12,6 +12,9 @@ let robotBindingCountdownTimer = null;
 let robotBindingExpiresAt = 0;
 let robotBindingLifetimeMs = 5 * 60 * 1000;
 let activeRobotBindingCode = '';
+// 锁机状态：未授权机器上整页锁定，登录/初始化全部不可用
+let licenseLocked = false;
+let licenseLockChecked = false;
 
 function isTokenValid() {
     return !!authToken && authTokenExpiry instanceof Date && authTokenExpiry.getTime() > Date.now();
@@ -92,7 +95,119 @@ function resolveAuthPromises(success) {
     authPromise = null;
 }
 
+// ===== 锁机页 =====
+
+// 查询授权状态；未授权则整页锁定（替代登录弹窗）
+async function checkLicenseLock() {
+    try {
+        const res = await fetch('/api/license/status');
+        if (!res.ok) {
+            return;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (data && data.restricted) {
+            licenseLocked = true;
+            showLicenseLock(data.machine_code || '');
+        } else {
+            licenseLocked = false;
+        }
+        licenseLockChecked = true;
+    } catch (error) {
+        console.warn('授权状态检查失败:', error);
+    }
+}
+
+function showLicenseLock(machineCode) {
+    const overlay = document.getElementById('license-lock-overlay');
+    if (!overlay) {
+        return;
+    }
+    // 若登录/初始化弹窗开着，先关掉：锁机优先
+    const loginOverlay = document.getElementById('login-overlay');
+    if (loginOverlay && loginOverlay.style.display !== 'none') {
+        try { closeAppModal('login-overlay'); } catch (e) { /* ignore */ }
+    }
+    const codeInput = document.getElementById('lock-machine-code');
+    if (codeInput && machineCode) {
+        codeInput.value = machineCode;
+    }
+    const errBox = document.getElementById('license-activate-error');
+    if (errBox) {
+        errBox.textContent = '';
+        errBox.style.display = 'none';
+    }
+    try { openAppModal('license-lock-overlay', { focus: false }); } catch (e) {
+        overlay.style.display = 'flex';
+    }
+    const keyInput = document.getElementById('license-key-input');
+    if (keyInput) {
+        setTimeout(() => keyInput.focus(), 100);
+    }
+}
+
+function hideLicenseLock() {
+    const overlay = document.getElementById('license-lock-overlay');
+    if (!overlay) {
+        return;
+    }
+    try { closeAppModal('license-lock-overlay'); } catch (e) { overlay.style.display = 'none'; }
+}
+
+async function submitLicenseActivate(event) {
+    event.preventDefault();
+    const keyInput = document.getElementById('license-key-input');
+    const errBox = document.getElementById('license-activate-error');
+    const submitBtn = event.target ? event.target.querySelector('.login-submit') : null;
+
+    function showErr(msg) {
+        if (errBox) {
+            errBox.textContent = msg;
+            errBox.style.display = 'block';
+        }
+    }
+
+    const key = keyInput ? keyInput.value.trim() : '';
+    if (!key) {
+        showErr('请输入作者发给你的解锁码');
+        return;
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
+    try {
+        const response = await fetch('/api/license/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.activated) {
+            showErr(result.error || '解锁码无效，请确认后重试');
+            return;
+        }
+        // 解锁成功：整页刷新进入正常应用（含首次初始化向导 / 登录）
+        if (result.warning) {
+            console.warn(result.warning);
+        }
+        licenseLocked = false;
+        hideLicenseLock();
+        location.reload();
+    } catch (error) {
+        console.error('解锁失败:', error);
+        showErr('解锁失败，请稍后重试');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+    }
+}
+
 function showLoginOverlay(message = '') {
+    // 锁机优先：未授权机器不允许看到登录界面
+    if (licenseLocked) {
+        showLicenseLock(document.getElementById('lock-machine-code')?.value || '');
+        return;
+    }
     const overlay = document.getElementById('login-overlay');
     const errorBox = document.getElementById('login-error');
     const usernameInput = document.getElementById('login-username');
@@ -245,6 +360,12 @@ async function ensureAuthenticated() {
     if (isTokenValid()) {
         return true;
     }
+    if (licenseLocked) {
+        // 未授权：挂起认证流程，锁机页解锁后整页刷新重走启动
+        showLicenseLock(document.getElementById('lock-machine-code')?.value || '');
+        await ensureAuthPromise();
+        return true;
+    }
     showLoginOverlay();
     await ensureAuthPromise();
     return true;
@@ -254,6 +375,11 @@ function handleUnauthorized({ message = null, silent = false } = {}) {
     clearAuthStorage();
     authPromise = null;
     authPromiseResolvers = [];
+    // 锁机优先：未授权机器不弹登录框
+    if (licenseLocked) {
+        showLicenseLock(document.getElementById('lock-machine-code')?.value || '');
+        return false;
+    }
     let finalMessage = message;
     if (!finalMessage) {
         if (typeof window !== 'undefined' && typeof window.t === 'function') {
@@ -789,6 +915,12 @@ function setupLoginUI() {
     if (setupForm) {
         setupForm.addEventListener('submit', submitSetup);
     }
+    const licenseActivateForm = document.getElementById('license-activate-form');
+    if (licenseActivateForm) {
+        licenseActivateForm.addEventListener('submit', submitLicenseActivate);
+    }
+    // 启动即探测锁机状态：未授权则整页锁定（在登录向导之前）
+    checkLicenseLock();
 }
 
 async function initializeApp() {

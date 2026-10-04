@@ -59,9 +59,11 @@ func NewAuthManager(sessionDurationHours int) *AuthManager {
 	}
 }
 
-// AttachRBACStore enables multi-user RBAC authentication. When no users exist yet,
-// it bootstraps the built-in admin account with an unshown random password and
-// returns a short setup code for the web-based first-run initialization wizard.
+// AttachRBACStore enables multi-user RBAC authentication. When the built-in
+// admin has no usable password yet (fresh DB or empty hash), it bootstraps
+// with an empty hash and returns a short setup code for the web-based
+// first-run initialization wizard. The pending-setup state persists across
+// restarts until CompleteSetup sets a real password.
 func (a *AuthManager) AttachRBACStore(db *database.DB) (setupCode string, err error) {
 	if db == nil {
 		return "", errors.New("database is required for authentication")
@@ -72,21 +74,7 @@ func (a *AuthManager) AttachRBACStore(db *database.DB) (setupCode string, err er
 		return "", err
 	}
 
-	// The bootstrap password exists only to satisfy the DB constraint and is
-	// never displayed or used; completing setup overwrites it.
-	adminPasswordHash := ""
-	if needsAdminPassword {
-		generatedPassword, genErr := GenerateStrongPassword(24)
-		if genErr != nil {
-			return "", genErr
-		}
-		adminPasswordHash, err = HashPassword(generatedPassword)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	if err := db.BootstrapRBAC(adminPasswordHash, PermissionCatalog); err != nil {
+	if err := db.BootstrapRBAC("", PermissionCatalog); err != nil {
 		return "", err
 	}
 
