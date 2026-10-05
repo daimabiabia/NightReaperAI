@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <!-- nightreaper-storage-migration: keep pre-rename browser state working -->
+    <script>/* NightReaper: one-time migration of legacy storage keys */
+(function(){try{
+  if(localStorage.getItem("cyberstrike-theme")!==null&&localStorage.getItem("nightreaper-theme")===null){localStorage.setItem("nightreaper-theme",localStorage.getItem("cyberstrike-theme"));}
+  if(localStorage.getItem("cyberstrike-auth")!==null&&localStorage.getItem("nightreaper-auth")===null){localStorage.setItem("nightreaper-auth",localStorage.getItem("cyberstrike-auth"));}
+  if(localStorage.getItem("cyberstrike-chat-agent-mode")!==null&&localStorage.getItem("nightreaper-chat-agent-mode")===null){localStorage.setItem("nightreaper-chat-agent-mode",localStorage.getItem("cyberstrike-chat-agent-mode"));}
+  if(localStorage.getItem("cyberstrike-chat-draft")!==null&&localStorage.getItem("nightreaper-chat-draft")===null){localStorage.setItem("nightreaper-chat-draft",localStorage.getItem("cyberstrike-chat-draft"));}
+  if(localStorage.getItem("cyberstrike-chat-ai-channel")!==null&&localStorage.getItem("nightreaper-chat-ai-channel")===null){localStorage.setItem("nightreaper-chat-ai-channel",localStorage.getItem("cyberstrike-chat-ai-channel"));}
+  if(localStorage.getItem("cyberstrike-chat-reasoning-mode")!==null&&localStorage.getItem("nightreaper-chat-reasoning-mode")===null){localStorage.setItem("nightreaper-chat-reasoning-mode",localStorage.getItem("cyberstrike-chat-reasoning-mode"));}
+  if(localStorage.getItem("cyberstrike-chat-reasoning-effort")!==null&&localStorage.getItem("nightreaper-chat-reasoning-effort")===null){localStorage.setItem("nightreaper-chat-reasoning-effort",localStorage.getItem("cyberstrike-chat-reasoning-effort"));}
+  if(localStorage.getItem("cyberstrike.activeProjectId")!==null&&localStorage.getItem("nightreaper.activeProjectId")===null){localStorage.setItem("nightreaper.activeProjectId",localStorage.getItem("cyberstrike.activeProjectId"));}
+}catch(e){}})();</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NightReaper AI</title>
@@ -9,7 +22,7 @@
     <script>
         (function () {
             try {
-                var stored = localStorage.getItem('cyberstrike-theme') || 'system';
+                var stored = localStorage.getItem('nightreaper-theme') || 'system';
                 if (stored !== 'system' && stored !== 'light' && stored !== 'dark') {
                     stored = 'system';
                 }
@@ -5554,14 +5567,14 @@
 }</code>
                         <strong data-i18n="externalMcpModal.httpMode">HTTP模式：</strong><br>
                         <code data-i18n="externalMcpModal.exampleHttp" style="display: block; margin: 8px 0; padding: 8px; background: var(--bg-secondary); border-radius: 4px; white-space: pre-wrap;">{
-  "cyberstrike-ai-http": {
+  "nightreaper-ai-http": {
     "transport": "http",
     "url": "http://127.0.0.1:8081/mcp"
   }
 }</code>
                         <strong data-i18n="externalMcpModal.sseMode">SSE模式：</strong><br>
                         <code data-i18n="externalMcpModal.exampleSse" style="display: block; margin: 8px 0; padding: 8px; background: var(--bg-secondary); border-radius: 4px; white-space: pre-wrap;">{
-  "cyberstrike-ai-sse": {
+  "nightreaper-ai-sse": {
     "transport": "sse",
     "url": "http://127.0.0.1:8081/mcp/sse"
   }

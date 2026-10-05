@@ -923,6 +923,30 @@ func (c *AIConfig) EnsureDefaultFromOpenAI(openAI OpenAIConfig) {
 	}
 }
 
+// DefaultAIChannelName returns a display name for the default AI channel, and
+// reports whether it is usable. A channel is unusable when either the api_key
+// or the model is blank - both produce 401/400 errors at request time.
+func (c *Config) DefaultAIChannelName() (name string, ok bool) {
+	if c == nil {
+		return "", false
+	}
+	ch, _, found := c.AI.ResolveChannel(c.AI.DefaultChannel)
+	if !found {
+		return "", false
+	}
+	id := NormalizeAIChannelID(c.AI.DefaultChannel)
+	if id == "" || id == "default" {
+		id = "默认通道"
+	}
+	label := ch.Model
+	if label == "" {
+		label = id
+	} else {
+		label = id + " (" + label + ")"
+	}
+	return label, strings.TrimSpace(ch.APIKey) != "" && strings.TrimSpace(ch.Model) != ""
+}
+
 func (c AIConfig) ResolveChannel(channelID string) (OpenAIConfig, string, bool) {
 	id := NormalizeAIChannelID(channelID)
 	if strings.TrimSpace(channelID) == "" {

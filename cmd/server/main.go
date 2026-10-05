@@ -184,6 +184,13 @@ func main() {
 		termout.PrintMachineLocked(license.MachineCode())
 	}
 
+	// AI 通道未配置 api_key 时提前告警：否则所有 AI 功能都会 401，
+	// 而 401 在界面上看起来像"网络问题"，很难定位。
+	if channelName, usable := cfg.DefaultAIChannelName(); !usable {
+		log.Warn("AI 通道未配置 api_key 或 model，AI 功能不可用", zap.String("channel", channelName))
+		termout.PrintAIChannelUnconfigured(channelName)
+	}
+
 	// 在后台监听信号
 	go func() {
 		sig := <-sigCh

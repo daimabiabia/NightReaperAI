@@ -130,6 +130,28 @@ func PrintSetupRequired(code string) {
 	s.BlankLine()
 }
 
+// PrintAIChannelUnconfigured prints a warning banner when the default AI
+// channel has no usable api_key. Without it every AI-backed feature (chat,
+// audit, report generation) fails with 401 Unauthorized, which is confusing
+// unless the console says so up front.
+func PrintAIChannelUnconfigured(channelName string) {
+	s := New(os.Stdout)
+	channelName = strings.TrimSpace(channelName)
+	if channelName == "" {
+		channelName = "默认通道"
+	}
+	s.BlankLine()
+	s.Println(s.Bold(s.Red("! AI 模型通道未配置 · AI 功能将无法使用")))
+	s.Println(s.Dim(strings.Repeat("─", 60)))
+	s.Println(s.White("  通道：") + s.Bold(s.Yellow(channelName)) + s.Dim("   api_key 为空"))
+	s.Println(s.White("  影响：对话、审计、报告生成等 AI 能力会返回 401 Unauthorized。"))
+	s.BlankLine()
+	s.Println(s.White("  解决方法（任选其一）："))
+	s.Println(s.Dim("    1. 编辑 config.yaml，填入 api_key（推荐，支持任何 OpenAI 兼容端点）"))
+	s.Println(s.Dim("    2. 或登录网页后进入「系统设置」填写 API Key"))
+	s.BlankLine()
+}
+
 // PrintBootstrapAdminCredentials prints the initial admin password banner.
 func PrintBootstrapAdminCredentials(password string) {
 	password = strings.TrimSpace(password)

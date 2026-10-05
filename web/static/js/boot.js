@@ -20,7 +20,7 @@
     if (tq === 'dark' || tq === 'light') {
       document.documentElement.setAttribute('data-theme', tq);
       document.documentElement.setAttribute('data-theme-preference', tq);
-      localStorage.setItem('cyberstrike-theme', tq);
+      localStorage.setItem('nightreaper-theme', tq);
     }
   } catch (e) { /* noop */ }
 

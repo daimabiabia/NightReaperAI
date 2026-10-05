@@ -831,7 +831,7 @@
         updateTurnRailState();
     }
 
-    window.CyberStrikeChatScroll = {
+    window.NightReaperChatScroll = {
         init: initChatScroll,
         onUserSendMessage: onUserSendMessage,
         onStreamEnd: onStreamEnd,
